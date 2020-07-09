@@ -29,7 +29,7 @@ public class AssociatedObject<T: Any>: OptionalAssociatedObject<T> {
 
     #if swift(>=5.2)
 
-    override func callAsFunction() -> T {
+    public override func callAsFunction() -> T {
         wrappedValue ?? self.default
     }
 
@@ -71,18 +71,18 @@ public class OptionalAssociatedObject<T: Any> {
 
     #if swift(>=5.2)
 
-    func callAsFunction() -> T? {
+    public func callAsFunction() -> T? {
         return wrappedValue
     }
 
-    func callAsFunction() throws -> T {
+    public func callAsFunction() throws -> T {
         if let v = wrappedValue {
             return v
         }
         throw OptionalAssociatedObjectError.getUnitializedValue
     }
 
-    func callAsFunction(_ newValue: T) -> Void {
+    public func callAsFunction(_ newValue: T) -> Void {
         wrappedValue = newValue
     }
 
