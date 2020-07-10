@@ -2,53 +2,48 @@ import XCTest
 @testable import SwiftAssociatedObject
 
 
-public enum Style {
-    case dark
-    case light
-    case `default`
+fileprivate class Test {
+
 }
 
-protocol Stylable {
-    var style: Style { get set }
+fileprivate protocol Findable {
+    var isFound: Bool { get set }
 }
 
-protocol Zombifiable {
-    var isZombified: Bool? { get set }
-}
-
-protocol Plantable {
+fileprivate protocol Plantable {
     var isPlanted: Bool { get set }
 }
 
-protocol Vampirifiable {
-    var isVampirified: Bool { get set }
+fileprivate protocol Testable {
+    var test: Test { get set }
 }
 
-extension NSObject: Stylable {
-    private func holder<T>() -> OptionalAssociatedObject<T> {
-        OptionalAssociatedObject(self, key: "Stylable")
+extension NSObject: Findable {
+    private var isFoundAssociated: AssociatedObject<Bool> {
+        AssociatedObject(self, key: "isFound",
+                         initValue: false, policy: .non_atomic)
     }
-    
-    public var style: Style {
-        get { holder().wrappedValue ?? Style.default }
-        set { holder().wrappedValue = newValue }
-    }
-}
 
-extension NSObject: Zombifiable {
-    private var isZombieAssociated: OptionalAssociatedObject<Bool> {
-        OptionalAssociatedObject(self, key: "isZombified")
+    #if swift(>=5.2)
+
+    public var isFound: Bool {
+        get { isFoundAssociated() }
+        set { isFoundAssociated(newValue) }
     }
-    
-    public var isZombified: Bool? {
-        get { isZombieAssociated.wrappedValue }
-        set { isZombieAssociated.wrappedValue = newValue }
+
+    #else
+
+    public var isFound: Bool {
+        get { isFoundAssociated.wrappedValue }
+        set { isFoundAssociated.wrappedValue = newValue }
     }
+
+    #endif
 }
 
 extension NSObject: Plantable {
     private var isPlantedAssociated: AssociatedObject<Bool> {
-        AssociatedObject(self, key: "isPlanted", defaultValue: false)
+        AssociatedObject(self, key: "isPlanted", initValue: false)
     }
     
     #if swift(>=5.2)
@@ -68,41 +63,55 @@ extension NSObject: Plantable {
     #endif
 }
 
-extension NSObject: Vampirifiable {
-    public var isVampirified: Bool {
+extension NSObject: Testable {
+    private var testAssociated: AssociatedObject<Test> {
+        AssociatedObject(self, key: "Testable",
+                         initValue: Test(),
+                         policy: .atomic)
+    }
+
+    fileprivate var test: Test {
         get {
-            do { return try OptionalAssociatedObject(self,
-                                                     key: "isVampirified")() }
-            catch { debugPrint(error); return false }
+            testAssociated()
         }
-        set { OptionalAssociatedObject(self, key: "isVampirified")(newValue)}
+        set {
+            testAssociated(newValue)
+        }
     }
 }
+
 
 final class SwiftAssociatedObjectTests: XCTestCase {
     func testSwiftAssociatedObject() {
         func subtest() {
             let a = NSObject()
-            a.style = .dark
             a.isPlanted = true
-            a.isZombified = false
-            a.isVampirified = true
-            
-            assert(a.style == .dark)
+
             assert(a.isPlanted == true)
-            assert(a.isZombified == false)
-            assert(a.isVampirified == true)
         }
         subtest()
         let b = NSObject()
-        
-        assert(b.style == .default)
+
         assert(b.isPlanted == false)
-        assert(b.isZombified == nil)
-        assert(b.isVampirified == false)
+    }
+
+    func testSwiftAssociatedObjectNonAtomic() {
+        func subtest() {
+            let a = NSObject()
+            a.isPlanted = true
+
+            assert(a.isPlanted == true)
+        }
+        subtest()
+        let b = NSObject()
+
+        assert(b.isPlanted == false)
     }
     
     static var allTests = [
-        ("testSwiftAssociatedObject", testSwiftAssociatedObject),
+        ("testSwiftAssociatedObject",
+         testSwiftAssociatedObject),
+        ("testSwiftAssociatedObjectNonAtomic",
+         testSwiftAssociatedObjectNonAtomic),
     ]
 }

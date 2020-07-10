@@ -51,14 +51,24 @@ internal struct AssociatedObjects {
         var res: T?
         self.accessQueue.sync {
             if policy == .assign {
-                let WeakObject = Self.property[key] as? WeakAssociatedObject<T>
-                res = WeakObject?.wrappedValue
+                let weakObject = Self.property[key] as? WeakAssociatedObject<Any>
+                res = weakObject?.wrappedValue as? T
             }
             else {
                 res = Self.property[key] as? T
             }
         }
         return res
+    }
+
+    internal static func haveKey(_ key: AssociatedObjectKey<AnyObject>,
+                                 policy: AssociatedObjectPolicy) -> Bool {
+        var res = false
+        self.accessQueue.sync {
+            res = self.property.contains(where: { $0.key == key })
+        }
+        return res
+
     }
     
     internal static func set(_ key: AssociatedObjectKey<AnyObject>,
