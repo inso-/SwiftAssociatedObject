@@ -8,113 +8,116 @@
 import Foundation
 
 @propertyWrapper
-public class AssociatedObject<T: Any>: OptionalAssociatedObject<T> {
+public class AssociatedObject<T: Any> {
 
-    public override var wrappedValue: T! {
-        get { AssociatedObjects.get(key, policy: policy) }
+    internal let key: AssociatedObjectKey<AnyObject>
+    internal var policy: AssociatedObjectPolicy
+
+    public typealias ObjectType = T
+    public typealias CopyPolicy = AssociatedObjectCopyValuePolicy
+    public typealias ValuePolicy = AssociatedObjectValuePolicy
+    public typealias ReferencePolicy = AssociatedObjectReferencePolicy
+
+
+    public var wrappedValue: ObjectType! {
+        get {
+            AssociatedObjects.get(key, policy: policy) }
         set {
-            AssociatedObjects.set(key, value: newValue as Any, policy: policy)
+            AssociatedObjects.set(key, value: newValue as Any,
+                                  policy: policy)
         }
     }
 
-    public init<M: Hashable>(_ object: AnyObject,
-                             key: M,
-                             initValue: T,
-                             policy: AssociatedObjectValuePolicy? = nil) {
-        super.init(object, key: key, policy: policy)
+    required internal init<M: Hashable>(_ object: AnyObject,
+                                        key: M,
+                                        initValue: T,
+                                        policy: AssociatedObjectPolicy,
+                                        internal: Bool) {
+        self.key = AssociatedObjectKey(object, key: key)
+        self.policy = policy
+        if !AssociatedObjects.haveKey(self.key, policy: self.policy) {
+            self.wrappedValue = initValue
+        }
+    }
+
+    convenience private init<M: Hashable>(_ object: AnyObject,
+                                          key: M,
+                                          initValue: T,
+                                          policy: RealPolicy,
+                                          internal: Bool) {
+        self.init(object, key: key,
+                  initValue: initValue,
+                  policy: policy.rPolicy,
+                  internal: true)
+    }
+
+    public convenience init<M: Hashable>(_ object: AnyObject,
+                                         key: M,
+                                         initValue: T,
+                                         policy: ValuePolicy = .atomic) {
+        self.init(object, key: key,
+                  initValue: initValue,
+                  policy: policy,
+                  internal: true)
         if wrappedValue == nil {
             wrappedValue = initValue
         }
     }
 
-    public init<M: Hashable>(_ object: AnyObject,
-                             key: M,
-                             initValue: T,
-                             policy: AssociatedObjectCopyValuePolicy)
+
+
+    public convenience init<M: Hashable>(_ object: AnyObject,
+                                         key: M,
+                                         initValue: T,
+                                         policy: ValuePolicy)
         where T: AnyObject & NSCopying {
-            super.init(object, key: key, policy: policy)
+            self.init(object, key: key,
+                      initValue: initValue,
+                      policy: policy,
+                      internal: true)
             if wrappedValue == nil {
                 wrappedValue = initValue
             }
     }
 
+    public convenience init<M: Hashable>(_ object: AnyObject,
+                             key: M,
+                             initValue: T? = nil,
+                             policy: ValuePolicy = .atomic)
+        where T: OptionalType {
+            self.init(object, key: key,
+                      initValue: initValue.asOptional ?? nil,
+                      policy: policy,
+                      internal: true)
+    }
+
+
+    public convenience init<M: Hashable>(_ object: AnyObject,
+                             key: M,
+                             initValue: T = nil,
+                             policy: ReferencePolicy)
+        where T: OptionalType, T.WrappedType: AnyObject {
+            self.init(object, key: key,
+            initValue: initValue.asOptional as? ObjectType ?? nil,
+            policy:policy,
+            internal: true)
+    }
+
+    public convenience init<M: Hashable>(_ object: AnyObject,
+                             key: M,
+                             initValue: T = nil,
+                             policy: CopyPolicy)
+        where T: OptionalType, T.WrappedType: AnyObject & NSCopying {
+            self.init(object, key: key,
+                      initValue: initValue.asOptional as? ObjectType ?? nil,
+                      policy:policy,
+                      internal: true)
+    }
+
     #if swift(>=5.2)
 
-    public override func callAsFunction() -> T {
+    public func callAsFunction() -> T {
         wrappedValue
-    }
-
-    #endif
-}
-
-
-@propertyWrapper
-public class OptionalAssociatedObject<T: Any> {
-
-    public var wrappedValue: T? {
-        get { AssociatedObjects.get(key, policy: policy) ?? nil }
-        set {
-            AssociatedObjects.set(key, value: newValue as Any, policy: policy)
-        }
-    }
-
-    internal let key: AssociatedObjectKey<AnyObject>
-    internal var policy: AssociatedObjectPolicy
-
-    public init<M: Hashable>(_ object: AnyObject,
-                             key: M,
-                             initValue: T? = nil,
-                             policy: AssociatedObjectValuePolicy? = .atomic) {
-        self.key = AssociatedObjectKey(object, key: key)
-        switch policy {
-        case .atomic, .none:
-            self.policy = .atomic
-        case .non_atomic:
-            self.policy = .non_atomic
-        }
-        if !AssociatedObjects.haveKey(self.key, policy: self.policy) {
-            self.wrappedValue = initValue
-        }
-    }
-
-
-    public init<M: Hashable>(_ object: AnyObject,
-                             key: M,
-                             initValue: T? = nil,
-                             policy: AssociatedObjectReferencePolicy)
-        where T: AnyObject {
-            self.key = AssociatedObjectKey(object, key: key)
-            switch policy {
-            case .assign:
-                self.policy = .assign
-            }
-        if !AssociatedObjects.haveKey(self.key, policy: self.policy) {
-            self.wrappedValue = initValue
-        }
-    }
-
-    public init<M: Hashable>(_ object: AnyObject,
-                             key: M,
-                             initValue: T? = nil,
-                             policy: AssociatedObjectCopyValuePolicy)
-        where T: AnyObject & NSCopying {
-            self.key = AssociatedObjectKey(object, key: key)
-            switch policy {
-            case .copy_atomic:
-                self.policy = .copy_atomic
-            case .copy_non_atomic:
-                self.policy = .copy_non_atomic
-            }
-        if !AssociatedObjects.haveKey(self.key, policy: self.policy) {
-            self.wrappedValue = initValue
-        }
-    }
-
-
-    #if swift(>=5.2)
-
-    public func callAsFunction() -> T? {
-        return wrappedValue
     }
 
     public func callAsFunction(_ newValue: T) -> Void {
@@ -123,14 +126,6 @@ public class OptionalAssociatedObject<T: Any> {
 
     #endif
 }
-
-#if swift(>=5.2)
-
-enum OptionalAssociatedObjectError: Error {
-    case getUnitializedValue
-}
-
-#endif
 
 internal enum AssociatedObjectPolicy {
 
@@ -160,15 +155,22 @@ internal enum AssociatedObjectPolicy {
     }
 }
 
-public enum AssociatedObjectReferencePolicy {
+internal protocol RealPolicy {
+    var rPolicy: AssociatedObjectPolicy { get }
+}
+
+public enum AssociatedObjectReferencePolicy: RealPolicy {
 
     /// Specifies a weak reference to the associated object.
     /// Require the associated object to be an optional reference type
     case assign
 
+    internal var rPolicy: AssociatedObjectPolicy {
+        .assign
+    }
 }
 
-public enum AssociatedObjectValuePolicy {
+public enum AssociatedObjectValuePolicy: RealPolicy {
 
     /// Specifies that the association is made atomically.
     /// On a reference type the associated object will be a strong reference.
@@ -179,9 +181,13 @@ public enum AssociatedObjectValuePolicy {
     /// On a reference type the associated object will be a strong reference.
     /// On a value type the associated object is copid.
     case non_atomic
+
+    internal var rPolicy: AssociatedObjectPolicy {
+        self == .atomic ? .atomic : .non_atomic
+    }
 }
 
-public enum AssociatedObjectCopyValuePolicy {
+public enum AssociatedObjectCopyValuePolicy: RealPolicy {
 
     /// Specifies that the associated object is copied.
     /// And that the association is made atomically.
@@ -194,4 +200,8 @@ public enum AssociatedObjectCopyValuePolicy {
     /// Require the associated object to be reference type
     /// and to conform to NSCopying protocol.
     case copy_non_atomic
+
+    internal var rPolicy: AssociatedObjectPolicy {
+        self == .copy_atomic ? .copy_atomic : .copy_non_atomic
+    }
 }

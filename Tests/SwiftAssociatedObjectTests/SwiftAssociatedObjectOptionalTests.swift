@@ -51,19 +51,19 @@ fileprivate protocol Testable {
 }
 
 extension NSObject: Stylable {
-    private func holder<T>() -> OptionalAssociatedObject<T> {
-        OptionalAssociatedObject(self, key: "Stylable")
+    private var holder: AssociatedObject<Style?> {
+       AssociatedObject(self, key: "Stylable")
     }
     
     fileprivate var style: Style {
-        get { holder().wrappedValue ?? Style.default }
-        set { holder().wrappedValue = newValue }
+        get { holder.wrappedValue ?? Style.default }
+        set { holder.wrappedValue = newValue }
     }
 }
 
 extension NSObject: Zombifiable {
-    private var isZombieAssociated: OptionalAssociatedObject<Bool> {
-        OptionalAssociatedObject(self, key: "isZombified")
+    private var isZombieAssociated: AssociatedObject<Bool?> {
+        AssociatedObject(self, key: "isZombified")
     }
     
     public var isZombified: Bool? {
@@ -74,8 +74,8 @@ extension NSObject: Zombifiable {
 
 extension NSObject: Vampirifiable {
     public var isVampirified: Bool {
-        get { OptionalAssociatedObject(self, key: "isVampirified", initValue: false)() ?? true}
-        set { OptionalAssociatedObject(self, key: "isVampirified")(newValue)}
+        get { AssociatedObject(self, key: "isVampirified", initValue: false)() ?? true}
+        set { AssociatedObject(self, key: "isVampirified")(Optional(newValue))}
     }
 }
 
@@ -83,9 +83,10 @@ var test: Int? = 42
 
 extension NSObject: Valuable {
 
-    private var valueAssociated: OptionalAssociatedObject<Int> {
-        OptionalAssociatedObject(self, key: "valueAssociated",
-                                 initValue: test, policy:.atomic)
+    private var valueAssociated: AssociatedObject<Int?> {
+        AssociatedObject(self, key: "valueAssociated",
+                                 initValue: test,
+                                 policy:.atomic)
     }
 
     public var value: Int? {
@@ -98,34 +99,24 @@ private var testClassGlobal = TestClass(value: 42)
 
 extension NSObject: Testable {
 
-    private var testAssociated: OptionalAssociatedObject<TestClass> {
-        OptionalAssociatedObject(self, key: "testClass",
-                         initValue: testClassGlobal,
-                         policy: .assign)
+    private var testAssociated: AssociatedObject<TestClass?> {
+        AssociatedObject(self, key: "test", initValue: Optional(testClassGlobal), policy: .assign)
     }
 
-    private var testCopyAssociated: OptionalAssociatedObject<TestClass> {
-        OptionalAssociatedObject(self, key: "testCopyClass",
-                         initValue: testClassGlobal,
+    private var testCopyAssociated: AssociatedObject<TestClass?> {
+        AssociatedObject(self, key: "testCopyClass",
+                         initValue: Optional(testClassGlobal),
                          policy: .copy_atomic)
     }
 
     fileprivate var testClass: TestClass {
-        get {
-            testAssociated() ?? TestClass(value: 88)
-        }
-        set {
-            testAssociated(newValue)
-        }
+        get { testAssociated() ?? TestClass(value: 88) }
+        set { testAssociated(newValue) }
     }
 
     fileprivate var testCopyClass: TestClass {
-        get {
-            testCopyAssociated() ?? TestClass(value: 88)
-        }
-        set {
-            testCopyAssociated(newValue)
-        }
+        get { (testCopyAssociated() ?? TestClass(value: 88)) }
+        set { testCopyAssociated(newValue) }
     }
 }
 
