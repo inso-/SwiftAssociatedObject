@@ -7,17 +7,6 @@
 
 import Foundation
 
-public protocol OptionalType: ExpressibleByNilLiteral {
-    associatedtype WrappedType
-    var asOptional: WrappedType? { get }
-}
-
-extension Optional: OptionalType {
-    public var asOptional: Wrapped? {
-        return self
-    }
-}
-
 @propertyWrapper
 private struct WeakAssociatedObject<Wrapped> {
     private weak var storage: AnyObject?
@@ -44,14 +33,14 @@ private struct WeakAssociatedObject<Wrapped> {
 
 internal struct AssociatedObjects {
     static private let queueName = "SynchronizedAssociatedObjectsAccess"
-    static private let accessQueue = DispatchQueue(label: Self.queueName,
+    static private let accessQueue = DispatchQueue(label: queueName,
                                                    attributes: .concurrent)
     static private var property = [AssociatedObjectKey<AnyObject>: Any?]()
     
     internal static func remove() {
-        if self.property.count == 0 { return }
+        if property.count == 0 { return }
         
-        Self.accessQueue.async(flags: .barrier) {
+        accessQueue.async(flags: .barrier) {
             property = property.filter({$0.key.wrappedValue != nil})
         }
     }
@@ -60,13 +49,13 @@ internal struct AssociatedObjects {
                                 policy: AssociatedObjectPolicy) -> T? {
         Self.remove()
         var res: T?
-        self.accessQueue.sync {
+        accessQueue.sync {
             if policy == .assign {
-                let weakObject = Self.property[key] as? WeakAssociatedObject<Any>
+                let weakObject = property[key] as? WeakAssociatedObject<Any>
                 res = weakObject?.wrappedValue as? T
             }
             else {
-                res = Self.property[key] as? T
+                res = property[key] as? T
             }
         }
         return res
@@ -75,8 +64,8 @@ internal struct AssociatedObjects {
     internal static func haveKey(_ key: AssociatedObjectKey<AnyObject>,
                                  policy: AssociatedObjectPolicy) -> Bool {
         var res = false
-        self.accessQueue.sync {
-            res = self.property.contains(where: { $0.key == key })
+        accessQueue.sync {
+            res = property.contains(where: { $0.key == key })
         }
         return res
 
@@ -88,15 +77,14 @@ internal struct AssociatedObjects {
         Self.remove()
         let flag: DispatchWorkItemFlags = policy.isAtomic ? .barrier : .detached
         
-        Self.accessQueue.async(flags: flag) {
+        accessQueue.async(flags: flag) {
             var toStore = value
             if policy == .assign {
                 toStore = WeakAssociatedObject(value)
             } else if policy.isCopy {
                 toStore = (value as! NSCopying).copy()
             }
-            Self.property[key, default: nil] = toStore
+            property[key, default: nil] = toStore
         }
     }
 }
-

@@ -7,6 +7,17 @@
 
 import Foundation
 
+public protocol AssociatedObjectOptionalType: ExpressibleByNilLiteral {
+    associatedtype WrappedType
+    var asOptional: WrappedType? { get }
+}
+
+extension Optional: AssociatedObjectOptionalType {
+    public var asOptional: Wrapped? {
+        return self
+    }
+}
+
 @propertyWrapper
 public class AssociatedObject<T: Any> {
 
@@ -17,6 +28,7 @@ public class AssociatedObject<T: Any> {
     public typealias CopyPolicy = AssociatedObjectCopyValuePolicy
     public typealias ValuePolicy = AssociatedObjectValuePolicy
     public typealias ReferencePolicy = AssociatedObjectReferencePolicy
+    public typealias OptionalType = AssociatedObjectOptionalType
 
 
     public var wrappedValue: ObjectType! {
@@ -28,7 +40,7 @@ public class AssociatedObject<T: Any> {
         }
     }
 
-    required internal init<M: Hashable>(_ object: AnyObject,
+    internal required init<M: Hashable>(_ object: AnyObject,
                                         key: M,
                                         initValue: T,
                                         policy: AssociatedObjectPolicy,
@@ -40,7 +52,7 @@ public class AssociatedObject<T: Any> {
         }
     }
 
-    convenience private init<M: Hashable>(_ object: AnyObject,
+    private convenience init<M: Hashable>(_ object: AnyObject,
                                           key: M,
                                           initValue: T,
                                           policy: RealPolicy,
@@ -125,83 +137,4 @@ public class AssociatedObject<T: Any> {
     }
 
     #endif
-}
-
-internal enum AssociatedObjectPolicy {
-
-    /// Specifies a weak reference to the associated object.
-    case assign
-
-    /// Specifies that the associated object is copied.
-    /// And that the association is made atomically.
-    case copy_atomic
-
-    /// Specifies that the associated object is copied.
-    /// And that the association is not made atomically.
-    case copy_non_atomic
-
-    /// Specifies that the association is made atomically.
-    case atomic
-
-    /// Specifies that the association is not made atomically.
-    case non_atomic
-
-    internal var isAtomic: Bool {
-        self == .copy_atomic || self == .atomic || self == .assign
-    }
-
-    internal var isCopy: Bool {
-        self == .copy_atomic || self == .copy_non_atomic
-    }
-}
-
-internal protocol RealPolicy {
-    var rPolicy: AssociatedObjectPolicy { get }
-}
-
-public enum AssociatedObjectReferencePolicy: RealPolicy {
-
-    /// Specifies a weak reference to the associated object.
-    /// Require the associated object to be an optional reference type
-    case assign
-
-    internal var rPolicy: AssociatedObjectPolicy {
-        .assign
-    }
-}
-
-public enum AssociatedObjectValuePolicy: RealPolicy {
-
-    /// Specifies that the association is made atomically.
-    /// On a reference type the associated object will be a strong reference.
-    /// On a value type the associated object is copid.
-    case atomic
-
-    /// Specifies that the association is not made atomically.
-    /// On a reference type the associated object will be a strong reference.
-    /// On a value type the associated object is copid.
-    case non_atomic
-
-    internal var rPolicy: AssociatedObjectPolicy {
-        self == .atomic ? .atomic : .non_atomic
-    }
-}
-
-public enum AssociatedObjectCopyValuePolicy: RealPolicy {
-
-    /// Specifies that the associated object is copied.
-    /// And that the association is made atomically.
-    /// Require the associated object to be reference type
-    /// and to conform to NSCopying protocol.
-    case copy_atomic
-
-    /// Specifies that the associated object is copied.
-    /// And that the association is not made atomically.
-    /// Require the associated object to be reference type
-    /// and to conform to NSCopying protocol.
-    case copy_non_atomic
-
-    internal var rPolicy: AssociatedObjectPolicy {
-        self == .copy_atomic ? .copy_atomic : .copy_non_atomic
-    }
 }
