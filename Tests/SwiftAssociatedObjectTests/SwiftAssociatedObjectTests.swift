@@ -72,10 +72,10 @@ extension NSObject: Testable {
 
     fileprivate var test: Test {
         get {
-            testAssociated()
+            testAssociated.wrappedValue
         }
         set {
-            testAssociated(newValue)
+            testAssociated.wrappedValue = newValue
         }
     }
 }

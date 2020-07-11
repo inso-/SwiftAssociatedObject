@@ -110,13 +110,13 @@ extension NSObject: Testable {
     }
 
     fileprivate var testClass: TestClass {
-        get { testAssociated() ?? TestClass(value: 88) }
-        set { testAssociated(newValue) }
+        get { testAssociated.wrappedValue ?? TestClass(value: 88) }
+        set { testAssociated.wrappedValue = newValue }
     }
 
     fileprivate var testCopyClass: TestClass {
-        get { (testCopyAssociated() ?? TestClass(value: 88)) }
-        set { testCopyAssociated(newValue) }
+        get { (testCopyAssociated.wrappedValue ?? TestClass(value: 88)) }
+        set { testCopyAssociated.wrappedValue = newValue }
     }
 }
 
