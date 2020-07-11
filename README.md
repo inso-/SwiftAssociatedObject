@@ -20,6 +20,7 @@ Swift Associated Object is a pure swift implementation of Associated Object bund
 - [Features](#features)
 - [Add stored properties on a class extension](#add-stored-properties-on-a-class-extension)
 	- [Using Associated Object](#using-associatedobject)
+	- [Associated Object Policy](#associated-object-policy)
 - [Requirements](#requirements)
 - [Installation](#installation)
 	- [Swift Package Manager](#swift-package-manager)
@@ -59,7 +60,7 @@ protocol MyProtocol {
 
 extension NSObject: MyProtocol {
     private var myStoredVarAssociated: AssociatedObject<Bool> {
-        AssociatedObject(self, key: "myStoredVar", defaultValue: false)
+        AssociatedObject(self, key: "myStoredVar", initValue: false)
     }
 
     public var myStoredVar: Bool {
@@ -79,7 +80,7 @@ protocol MyProtocol {
 
 extension NSObject: MyProtocol {
     private var myStoredVarAssociated: AssociatedObject<Bool> {
-        AssociatedObject(self, key: "myStoredVar", defaultValue: false)
+        AssociatedObject(self, key: "myStoredVar", initValue: false)
     }
     
     public var myStoredVar: Bool {
@@ -88,6 +89,81 @@ extension NSObject: MyProtocol {
     }
 }
 ```
+
+### Associated Object Policy
+
+You can specify an AssociatedObjectPolicy on AssociatedObject Initialization to define the association type.
+If you don't define one the default .atomic Policy will be used.
+
+```swift
+ 	/// Specifies a weak reference to the associated object.
+    	/// Require the associated object to be an optional reference type.
+    	case assign
+
+	/// Specifies that the association is made atomically.
+    	/// On a reference type the associated object will be a strong reference.
+    	/// On a value type the associated object is copied.
+    	case atomic
+
+	/// Specifies that the association is not made atomically.
+    	/// On a reference type the associated object will be a strong reference.
+    	/// On a value type the associated object is copied.
+    	case non_atomic
+
+	/// Specifies that the associated object is copied.
+    	/// And that the association is made atomically.
+    	/// Require the associated object to be reference type
+    	/// and to conform to NSCopying protocol.
+    	case copy_atomic
+
+	/// Specifies that the associated object is copied.
+    	/// And that the association is not made atomically.
+    	/// Require the associated object to be reference type
+    	/// and to conform to NSCopying protocol.
+    	case copy_non_atomic
+
+```
+
+#### AssociatedObjectPolicy Exemple
+
+```swift
+
+import SwiftAssociatedObject
+
+private var testClassGlobal = NSNumber(value: 42)
+
+fileprivate protocol Valuable {
+    var weakValue: NSNumber? { get set }
+    var copiedOptionalValue: NSNumber? { get set }
+}
+
+extension NSObject: Valuable {
+
+    private var weakValueAssociated: AssociatedObject<NSNumber?> {
+        AssociatedObject(self, key: "weakValue", initValue: Optional(testClassGlobal), policy: .assign)
+    }
+
+    private var copiedOptionalAssociated: AssociatedObject<NSNumber?> {
+        AssociatedObject(self, key: "copiedOptionalValue",
+                         initValue: Optional(testClassGlobal),
+                         policy: .copy_atomic)
+    }
+
+    fileprivate var weakValue: NSNumber? {
+        get { weakValueAssociated() }
+        set { weakValueAssociated(newValue) }
+    }
+
+    fileprivate var copiedOptionalValue: NSNumber? {
+        get { copiedOptionalAssociated() }
+        set { copiedOptionalAssociated(newValue) }
+    }
+}
+```
+
+#### Associated Object Policy
+
+
 
 ## Requirements
 
