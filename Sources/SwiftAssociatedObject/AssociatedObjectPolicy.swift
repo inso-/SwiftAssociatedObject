@@ -10,7 +10,7 @@ import Foundation
 public enum AssociatedObjectReferencePolicy {
 
     /// Specifies a weak reference to the associated object.
-    /// Require the associated object to be an optional reference type
+    /// Require the associated object to be an optional reference type.
     case assign
 }
 
@@ -18,12 +18,12 @@ public enum AssociatedObjectValuePolicy {
 
     /// Specifies that the association is made atomically.
     /// On a reference type the associated object will be a strong reference.
-    /// On a value type the associated object is copid.
+    /// On a value type the associated object is copied.
     case atomic
 
     /// Specifies that the association is not made atomically.
     /// On a reference type the associated object will be a strong reference.
-    /// On a value type the associated object is copid.
+    /// On a value type the associated object is copied.
     case non_atomic
 }
 
